@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@import "grapesjs/dist/css/grapes.min.css";
+
+@layer base {
+  html {
+    background-color: #ffffff;
+    color: #334155;
+  }
+  body {
+    font-family: var(--font-roboto), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #ffffff;
+    color: #334155;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-inter), sans-serif;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+}
+
+/* Custom scrollbars with pastel/light styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Grapesjs clean overrides */
+.gjs-cv-canvas {
+  width: 100%;
+  height: 100%;
+  top: 0;
+}

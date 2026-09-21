@@ -1,0 +1,6 @@
+{
+  "name": "Mailing Frontend",
+  "description": "Email marketing campaign management dashboard with subscriber tracking, visual email template builder, project SMTP integration, and role-based access control.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
