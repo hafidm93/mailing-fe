@@ -24,13 +24,13 @@ interface SmtpModalProps {
 export default function SmtpModal({ isOpen, onClose, project }: SmtpModalProps) {
   const { updateProject, testProjectSmtp } = useMailingStore();
 
-  const [host, setHost] = useState(project?.smtp.host || 'smtp.resend.com');
-  const [port, setPort] = useState(project?.smtp.port || 587);
-  const [secure, setSecure] = useState(project?.smtp.secure ?? true);
-  const [user, setUser] = useState(project?.smtp.user || '');
-  const [pass, setPass] = useState(project?.smtp.pass || '');
-  const [fromName, setFromName] = useState(project?.smtp.fromName || '');
-  const [fromEmail, setFromEmail] = useState(project?.smtp.fromEmail || '');
+  const [host, setHost] = useState(project?.smtp?.host || 'smtp.resend.com');
+  const [port, setPort] = useState(project?.smtp?.port || 587);
+  const [secure, setSecure] = useState(project?.smtp?.secure ?? true);
+  const [user, setUser] = useState(project?.smtp?.user || '');
+  const [pass, setPass] = useState(project?.smtp?.pass || '');
+  const [fromName, setFromName] = useState(project?.smtp?.fromName || '');
+  const [fromEmail, setFromEmail] = useState(project?.smtp?.fromEmail || '');
 
   // SMTP Test State
   const [testingStatus, setTestingStatus] = useState<
@@ -81,7 +81,7 @@ export default function SmtpModal({ isOpen, onClose, project }: SmtpModalProps) 
         pass,
         fromName,
         fromEmail,
-        isVerified: testingStatus === 'success' || project.smtp.isVerified,
+        isVerified: testingStatus === 'success' || !!project.smtp?.isVerified,
         lastTestedAt: new Date().toISOString(),
       };
 

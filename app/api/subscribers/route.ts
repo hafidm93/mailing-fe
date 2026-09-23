@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
     list = list.filter(
       (s) =>
         s.email.toLowerCase().includes(q) ||
-        s.name.toLowerCase().includes(q) ||
-        s.tags.some((t) => t.toLowerCase().includes(q))
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.tags || []).some((t) => t.toLowerCase().includes(q))
     );
   }
 

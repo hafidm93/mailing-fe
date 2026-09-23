@@ -110,10 +110,12 @@ export default function OrganizationsView() {
               <div>
                 <div className="text-slate-400 text-[10px] font-medium">Dibuat</div>
                 <div className="font-bold text-slate-800 text-xs truncate">
-                  {new Date(org.createdAt).toLocaleDateString('id-ID', {
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+                  {org.createdAt || org.created_at
+                    ? new Date(org.createdAt || org.created_at || '').toLocaleDateString('id-ID', {
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                    : '-'}
                 </div>
               </div>
             </div>

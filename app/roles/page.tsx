@@ -2,12 +2,12 @@
 
 import React from 'react';
 import AppShell from '@/components/layout/AppShell';
-import DashboardView from '@/components/dashboard/DashboardView';
+import AccessPolicyView from '@/components/admin/AccessPolicyView';
 
-export default function RootPage() {
+export default function RolesPage() {
   return (
     <AppShell>
-      <DashboardView />
+      <AccessPolicyView />
     </AppShell>
   );
 }

@@ -2,12 +2,12 @@
 
 import React from 'react';
 import AppShell from '@/components/layout/AppShell';
-import DashboardView from '@/components/dashboard/DashboardView';
+import SubscribersView from '@/components/subscribers/SubscribersView';
 
-export default function RootPage() {
+export default function SubscribersPage() {
   return (
     <AppShell>
-      <DashboardView />
+      <SubscribersView />
     </AppShell>
   );
 }

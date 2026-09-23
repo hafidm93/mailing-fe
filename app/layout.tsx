@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
 import { Inter, Roboto } from 'next/font/google';
 import './globals.css';
+import AppProviders from '@/components/providers/AppProviders';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -34,7 +35,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${roboto.variable}`}>
       <body className="font-[family-name:var(--font-roboto)] antialiased bg-white text-slate-700 min-h-screen" suppressHydrationWarning>
-        {children}
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

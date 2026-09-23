@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useMailingStore } from '@/lib/store';
 import {
   FolderKanban,
@@ -16,11 +17,11 @@ import {
 } from 'lucide-react';
 
 interface DashboardViewProps {
-  onNavigateToSubscribers: () => void;
-  onNavigateToCampaigns: () => void;
-  onNavigateToProjects: () => void;
-  onOpenCreateCampaign: () => void;
-  onOpenBulkSend: () => void;
+  onNavigateToSubscribers?: () => void;
+  onNavigateToCampaigns?: () => void;
+  onNavigateToProjects?: () => void;
+  onOpenCreateCampaign?: () => void;
+  onOpenBulkSend?: () => void;
 }
 
 export default function DashboardView({
@@ -30,6 +31,7 @@ export default function DashboardView({
   onOpenCreateCampaign,
   onOpenBulkSend,
 }: DashboardViewProps) {
+  const router = useRouter();
   const {
     analytics,
     selectedProjectId,
@@ -38,6 +40,26 @@ export default function DashboardView({
     campaigns,
     hasPermission,
   } = useMailingStore();
+
+  const handleGoSubscribers = () => {
+    if (onNavigateToSubscribers) onNavigateToSubscribers();
+    else router.push('/subscribers');
+  };
+
+  const handleGoCampaigns = () => {
+    if (onNavigateToCampaigns) onNavigateToCampaigns();
+    else router.push('/campaigns');
+  };
+
+  const handleGoProjects = () => {
+    if (onNavigateToProjects) onNavigateToProjects();
+    else router.push('/projects');
+  };
+
+  const handleGoCreateCampaign = () => {
+    if (onOpenCreateCampaign) onOpenCreateCampaign();
+    else router.push('/campaigns/new');
+  };
 
   const maxGrowthSub = Math.max(...analytics.monthlyGrowth.map((m) => m.subscribers), 100);
 
@@ -82,7 +104,7 @@ export default function DashboardView({
             <button
               id="btn-dash-create-campaign"
               type="button"
-              onClick={onOpenCreateCampaign}
+              onClick={handleGoCreateCampaign}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg bg-[#6094d4] hover:bg-[#5285c5] text-white transition-colors cursor-pointer shadow-xs"
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -96,7 +118,7 @@ export default function DashboardView({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Projects */}
         <div
-          onClick={onNavigateToProjects}
+          onClick={handleGoProjects}
           className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs cursor-pointer hover:border-[#6094d4] transition-colors group"
         >
           <div className="flex items-center justify-between mb-3">
@@ -118,7 +140,7 @@ export default function DashboardView({
 
         {/* Total Email Data / Subscribers */}
         <div
-          onClick={onNavigateToSubscribers}
+          onClick={handleGoSubscribers}
           className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs cursor-pointer hover:border-[#6094d4] transition-colors group"
         >
           <div className="flex items-center justify-between mb-3">
@@ -140,7 +162,7 @@ export default function DashboardView({
 
         {/* Active Subscribers */}
         <div
-          onClick={onNavigateToSubscribers}
+          onClick={handleGoSubscribers}
           className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs cursor-pointer hover:border-[#6094d4] transition-colors group"
         >
           <div className="flex items-center justify-between mb-3">
@@ -157,16 +179,37 @@ export default function DashboardView({
           <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
             <span>
               {analytics.totalSubscribers > 0
-                ? Math.round((analytics.activeSubscribers / analytics.totalSubscribers) * 100)
-                : 0}
-              % Rasio aktif penerima
+                ? `${Math.round((analytics.activeSubscribers / analytics.totalSubscribers) * 100)}% Rasio Sehat`
+                : '100% Rasio'}
             </span>
+          </div>
+        </div>
+
+        {/* Total Campaigns Sent */}
+        <div
+          onClick={handleGoCampaigns}
+          className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs cursor-pointer hover:border-[#6094d4] transition-colors group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-medium text-slate-500">
+              Campaign Terkirim
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#edf4fc] flex items-center justify-center text-[#6094d4] group-hover:bg-[#6094d4] group-hover:text-white transition-colors">
+              <Send className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-slate-800">
+            {analytics.totalCampaignsSent}
+          </div>
+          <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <span>{analytics.averageOpenRate}% Rata-rata Buka</span>
+            <ArrowUpRight className="w-3 h-3 text-slate-400 group-hover:text-[#6094d4] ml-auto" />
           </div>
         </div>
 
         {/* Unsubscribers & Bounces */}
         <div
-          onClick={onNavigateToSubscribers}
+          onClick={handleGoSubscribers}
           className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs cursor-pointer hover:border-[#6094d4] transition-colors group"
         >
           <div className="flex items-center justify-between mb-3">
@@ -340,7 +383,7 @@ export default function DashboardView({
             </div>
             <button
               type="button"
-              onClick={onNavigateToProjects}
+              onClick={handleGoProjects}
               className="text-xs font-medium text-[#335c94] hover:underline cursor-pointer"
             >
               Lihat Semua
@@ -383,7 +426,7 @@ export default function DashboardView({
             </div>
             <button
               type="button"
-              onClick={onNavigateToCampaigns}
+              onClick={handleGoCampaigns}
               className="text-xs font-medium text-[#335c94] hover:underline cursor-pointer"
             >
               Kelola Campaign

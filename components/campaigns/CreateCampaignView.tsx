@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMailingStore } from '@/lib/store';
 import { EmailTemplate, Project } from '@/types';
 import BlockEmailEditor from './BlockEmailEditor';
@@ -26,7 +27,7 @@ import {
 } from 'lucide-react';
 
 interface CreateCampaignViewProps {
-  onBack: () => void;
+  onBack?: () => void;
   initialTemplate?: EmailTemplate | null;
   initialProject?: Project | null;
 }
@@ -36,7 +37,13 @@ export default function CreateCampaignView({
   initialTemplate,
   initialProject,
 }: CreateCampaignViewProps) {
+  const router = useRouter();
   const { projects, templates, createCampaign } = useMailingStore();
+
+  const handleBack = () => {
+    if (onBack) onBack();
+    else router.push('/campaigns');
+  };
 
   // Campaign Meta State
   const [name, setName] = useState(
@@ -105,8 +112,8 @@ export default function CreateCampaignView({
 
   const handleApplyTemplate = (tpl: EmailTemplate) => {
     setSelectedTemplateId(tpl.id);
-    setSubject(tpl.subject);
-    setHtmlContent(tpl.htmlContent);
+    setSubject(tpl.subject || '');
+    setHtmlContent(tpl.htmlContent || '');
     setMjmlContent(tpl.mjmlContent || '');
     setSubmitNotice(`Template "${tpl.name}" berhasil diterapkan.`);
     setTimeout(() => setSubmitNotice(null), 3000);
@@ -128,7 +135,7 @@ export default function CreateCampaignView({
         fromEmail,
         projectId: selectedProject?.id || 'all',
         projectName: selectedProject?.name || 'Project Utama',
-        templateId: selectedTemplateId || undefined,
+        template_id: selectedTemplateId || undefined,
         htmlContent,
         mjmlContent,
         status,
@@ -142,7 +149,7 @@ export default function CreateCampaignView({
       );
 
       setTimeout(() => {
-        onBack();
+        handleBack();
       }, 900);
     } catch (e) {
       console.error(e);
@@ -183,7 +190,7 @@ export default function CreateCampaignView({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={onBack}
+            onClick={handleBack}
             className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
             title="Kembali ke Daftar Campaign"
           >

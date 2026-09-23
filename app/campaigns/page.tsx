@@ -2,12 +2,12 @@
 
 import React from 'react';
 import AppShell from '@/components/layout/AppShell';
-import DashboardView from '@/components/dashboard/DashboardView';
+import CampaignsView from '@/components/campaigns/CampaignsView';
 
-export default function RootPage() {
+export default function CampaignsPage() {
   return (
     <AppShell>
-      <DashboardView />
+      <CampaignsView />
     </AppShell>
   );
 }

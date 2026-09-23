@@ -190,7 +190,7 @@ export default function BulkSendModal({
                   Sedang Mengirim Email Massal...
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Memproses batch {currentBatch} dari {totalBatches} ke server SMTP: {project.smtp.host}
+                  Memproses batch {currentBatch} dari {totalBatches} ke server SMTP: {project?.smtp?.host || 'smtp.server.com'}
                 </p>
               </div>
 
@@ -331,21 +331,21 @@ export default function BulkSendModal({
                   </div>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
-                      project.smtp.isVerified
+                      project?.smtp?.isVerified
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         : 'bg-amber-50 text-amber-700 border border-amber-200'
                     }`}
                   >
-                    {project.smtp.isVerified ? 'SMTP Verified' : 'Unverified'}
+                    {project?.smtp?.isVerified ? 'SMTP Verified' : 'Unverified'}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500">
                   <div>
-                    Host: <strong className="text-slate-700">{project.smtp.host}</strong>
+                    Host: <strong className="text-slate-700">{project?.smtp?.host || 'Belum diatur'}</strong>
                   </div>
                   <div>
-                    From: <strong className="text-slate-700">{project.smtp.fromEmail}</strong>
+                    From: <strong className="text-slate-700">{project?.smtp?.fromEmail || 'Belum diatur'}</strong>
                   </div>
                 </div>
               </div>

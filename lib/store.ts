@@ -12,6 +12,20 @@ import {
   EmailTemplate,
   AccessPolicy,
   DashboardAnalytics,
+  UserSession,
+  RoleEntity,
+  Permission,
+  RolePermission,
+  UserRoleAssignment,
+  ProjectKey,
+  MailingList,
+  Contact,
+  Subscription,
+  EmailProvider,
+  SendingDomain,
+  EmailIdentity,
+  EmailTemplateVersion,
+  CampaignRecipient,
 } from '@/types';
 import {
   INITIAL_USERS,
@@ -21,6 +35,19 @@ import {
   INITIAL_CAMPAIGNS,
   INITIAL_TEMPLATES,
   INITIAL_ACCESS_POLICIES,
+  INITIAL_USER_SESSIONS,
+  INITIAL_ROLES,
+  INITIAL_PERMISSIONS,
+  INITIAL_ROLES_PERMISSIONS,
+  INITIAL_USER_ROLE_ASSIGNMENTS,
+  INITIAL_PROJECT_KEYS,
+  INITIAL_MAILING_LISTS,
+  INITIAL_EMAIL_PROVIDERS,
+  INITIAL_SENDING_DOMAINS,
+  INITIAL_EMAIL_IDENTITIES,
+  INITIAL_SUBSCRIPTIONS,
+  INITIAL_EMAIL_TEMPLATE_VERSIONS,
+  INITIAL_CAMPAIGN_RECIPIENTS,
 } from '@/lib/mock-data';
 
 interface MailingContextType {
@@ -47,16 +74,40 @@ interface MailingContextType {
   organizations: Organization[];
   createOrganization: (orgData: Partial<Organization>) => Promise<Organization>;
 
-  // Subscribers
+  // Subscribers / Contacts
   subscribers: Subscriber[];
+  contacts: Contact[];
   addSubscriber: (sub: Partial<Subscriber>) => Promise<Subscriber>;
+  addContact: (contact: Partial<Contact>) => Promise<Contact>;
   updateSubscriberStatus: (id: string, status: SubscriberStatus) => Promise<void>;
   deleteSubscriber: (id: string) => Promise<void>;
   bulkUpdateSubscriberStatus: (ids: string[], status: SubscriberStatus) => Promise<void>;
 
+  // Mailing Lists & Subscriptions
+  mailingLists: MailingList[];
+  createMailingList: (data: Partial<MailingList>) => Promise<MailingList>;
+  subscriptions: Subscription[];
+  addSubscription: (contactId: string, mailingListId: string) => Promise<Subscription>;
+
+  // Project Keys
+  projectKeys: ProjectKey[];
+  createProjectKey: (data: Partial<ProjectKey>) => Promise<ProjectKey>;
+  revokeProjectKey: (id: string) => Promise<void>;
+
+  // Sending Domains, Providers & Identities
+  emailProviders: EmailProvider[];
+  addEmailProvider: (data: Partial<EmailProvider>) => Promise<EmailProvider>;
+  sendingDomains: SendingDomain[];
+  addSendingDomain: (data: Partial<SendingDomain>) => Promise<SendingDomain>;
+  verifySendingDomain: (id: string) => Promise<void>;
+  emailIdentities: EmailIdentity[];
+  addEmailIdentity: (data: Partial<EmailIdentity>) => Promise<EmailIdentity>;
+
   // Campaigns & Templates
   campaigns: Campaign[];
   templates: EmailTemplate[];
+  templateVersions: EmailTemplateVersion[];
+  campaignRecipients: CampaignRecipient[];
   createCampaign: (data: Partial<Campaign>) => Promise<Campaign>;
   updateCampaign: (campaign: Campaign) => Promise<Campaign>;
   sendBulkCampaign: (
@@ -70,6 +121,12 @@ interface MailingContextType {
   users: User[];
   createUser: (userData: Partial<User>) => Promise<User>;
   updateUser: (userData: User) => Promise<User>;
+  userSessions: UserSession[];
+  roles: RoleEntity[];
+  permissions: Permission[];
+  rolesPermissions: RolePermission[];
+  userRoleAssignments: UserRoleAssignment[];
+  assignUserRole: (userId: string, roleId: string, projectId: string | null) => Promise<void>;
   accessPolicies: AccessPolicy[];
   updateAccessPolicy: (role: Role, permissions: AccessPolicy['permissions']) => Promise<void>;
   hasPermission: (permissionKey: keyof AccessPolicy['permissions']) => boolean;
@@ -88,91 +145,77 @@ const STORAGE_PREFIX = 'mailing_app_';
 
 export function MailingProvider({ children }: { children: React.ReactNode }) {
   // Theme state: default to false (white base with pastel primary)
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedTheme = localStorage.getItem(`${STORAGE_PREFIX}theme`);
-        if (savedTheme === 'dark') {
-          return true;
-        }
-      } catch {
-        // fallback
-      }
-    }
-    return false;
-  });
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
   // Auth state
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedUser = localStorage.getItem(`${STORAGE_PREFIX}user`);
-        if (savedUser) return JSON.parse(savedUser);
-      } catch {
-        // fallback
-      }
-    }
-    return INITIAL_USERS[0];
-  });
+  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]);
   const [isLoadingAuth] = useState<boolean>(false);
 
   // Data states
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
-  const [projects, setProjects] = useState<Project[]>(() => {
-    if (typeof window !== 'undefined') {
+  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [organizations, setOrganizations] = useState<Organization[]>(INITIAL_ORGANIZATIONS);
+  const [subscribers, setSubscribers] = useState<Subscriber[]>(INITIAL_SUBSCRIBERS);
+  const [campaigns, setCampaigns] = useState<Campaign[]>(INITIAL_CAMPAIGNS);
+  const [templates, setTemplates] = useState<EmailTemplate[]>(INITIAL_TEMPLATES);
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  const [accessPolicies, setAccessPolicies] = useState<AccessPolicy[]>(INITIAL_ACCESS_POLICIES);
+
+  // Hydrate persisted state on client mount (avoids SSR hydration mismatch)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const savedTheme = localStorage.getItem(`${STORAGE_PREFIX}theme`);
+        if (savedTheme === 'dark') setIsDarkMode(true);
+      } catch {}
+      try {
+        const savedUser = localStorage.getItem(`${STORAGE_PREFIX}user`);
+        if (savedUser) setCurrentUser(JSON.parse(savedUser));
+      } catch {}
       try {
         const s = localStorage.getItem(`${STORAGE_PREFIX}projects`);
-        if (s) return JSON.parse(s);
+        if (s) setProjects(JSON.parse(s));
       } catch {}
-    }
-    return INITIAL_PROJECTS;
-  });
-  const [organizations, setOrganizations] = useState<Organization[]>(INITIAL_ORGANIZATIONS);
-  const [subscribers, setSubscribers] = useState<Subscriber[]>(() => {
-    if (typeof window !== 'undefined') {
       try {
         const s = localStorage.getItem(`${STORAGE_PREFIX}subscribers`);
-        if (s) return JSON.parse(s);
+        if (s) setSubscribers(JSON.parse(s));
       } catch {}
-    }
-    return INITIAL_SUBSCRIBERS;
-  });
-  const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
-    if (typeof window !== 'undefined') {
       try {
         const s = localStorage.getItem(`${STORAGE_PREFIX}campaigns`);
-        if (s) return JSON.parse(s);
+        if (s) setCampaigns(JSON.parse(s));
       } catch {}
-    }
-    return INITIAL_CAMPAIGNS;
-  });
-  const [templates, setTemplates] = useState<EmailTemplate[]>(() => {
-    if (typeof window !== 'undefined') {
       try {
         const s = localStorage.getItem(`${STORAGE_PREFIX}templates`);
-        if (s) return JSON.parse(s);
+        if (s) setTemplates(JSON.parse(s));
       } catch {}
-    }
-    return INITIAL_TEMPLATES;
-  });
-  const [users, setUsers] = useState<User[]>(() => {
-    if (typeof window !== 'undefined') {
       try {
         const s = localStorage.getItem(`${STORAGE_PREFIX}users`);
-        if (s) return JSON.parse(s);
+        if (s) setUsers(JSON.parse(s));
       } catch {}
-    }
-    return INITIAL_USERS;
-  });
-  const [accessPolicies, setAccessPolicies] = useState<AccessPolicy[]>(() => {
-    if (typeof window !== 'undefined') {
       try {
         const s = localStorage.getItem(`${STORAGE_PREFIX}policies`);
-        if (s) return JSON.parse(s);
+        if (s) setAccessPolicies(JSON.parse(s));
       } catch {}
-    }
-    return INITIAL_ACCESS_POLICIES;
-  });
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // ERD Tables States
+  const [userSessions] = useState<UserSession[]>(INITIAL_USER_SESSIONS);
+  const [roles] = useState<RoleEntity[]>(INITIAL_ROLES);
+  const [permissions] = useState<Permission[]>(INITIAL_PERMISSIONS);
+  const [rolesPermissions] = useState<RolePermission[]>(INITIAL_ROLES_PERMISSIONS);
+  const [userRoleAssignments, setUserRoleAssignments] = useState<UserRoleAssignment[]>(INITIAL_USER_ROLE_ASSIGNMENTS);
+
+  const [projectKeys, setProjectKeys] = useState<ProjectKey[]>(INITIAL_PROJECT_KEYS);
+  const [mailingLists, setMailingLists] = useState<MailingList[]>(INITIAL_MAILING_LISTS);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>(INITIAL_SUBSCRIPTIONS);
+  const [emailProviders, setEmailProviders] = useState<EmailProvider[]>(INITIAL_EMAIL_PROVIDERS);
+  const [sendingDomains, setSendingDomains] = useState<SendingDomain[]>(INITIAL_SENDING_DOMAINS);
+  const [emailIdentities, setEmailIdentities] = useState<EmailIdentity[]>(INITIAL_EMAIL_IDENTITIES);
+  const [templateVersions] = useState<EmailTemplateVersion[]>(INITIAL_EMAIL_TEMPLATE_VERSIONS);
+  const [campaignRecipients] = useState<CampaignRecipient[]>(INITIAL_CAMPAIGN_RECIPIENTS);
 
   // Sync dark mode class with DOM
   useEffect(() => {
@@ -271,7 +314,7 @@ export function MailingProvider({ children }: { children: React.ReactNode }) {
         return { success: false, message: data.message || 'Login gagal. Cek username dan password.' };
       } catch (err) {
         // Fallback check against local users
-        const matched = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
+        const matched = users.find((u) => (u.username || u.email || '').toLowerCase() === username.toLowerCase());
         if (matched) {
           setCurrentUser(matched);
           localStorage.setItem(`${STORAGE_PREFIX}user`, JSON.stringify(matched));
@@ -372,7 +415,10 @@ export function MailingProvider({ children }: { children: React.ReactNode }) {
       };
     } catch (e) {
       await new Promise((r) => setTimeout(r, 600));
-      return { success: true, message: `SMTP Terhubung sukses ke ${config.host}:${config.port}` };
+      return {
+        success: true,
+        message: config ? `SMTP Terhubung sukses ke ${config.host}:${config.port}` : 'SMTP Terhubung sukses',
+      };
     }
   }, []);
 
@@ -416,7 +462,7 @@ export function MailingProvider({ children }: { children: React.ReactNode }) {
 
       // Update project subscriber count
       const updatedProjects = projects.map((p) =>
-        p.id === proj.id ? { ...p, subscriberCount: p.subscriberCount + 1 } : p
+        p.id === proj.id ? { ...p, subscriberCount: (p.subscriberCount || 0) + 1 } : p
       );
       saveProjects(updatedProjects);
 
@@ -473,17 +519,20 @@ export function MailingProvider({ children }: { children: React.ReactNode }) {
       const proj = projects.find((p) => p.id === data.projectId) || projects[0];
       const newCamp: Campaign = {
         id: `cmp-${Date.now()}`,
+        project_id: data.project_id || proj.id,
+        identity_id: data.identity_id || 'ident-saas-updates',
         name: data.name || 'Untitled Campaign',
         subject: data.subject || 'Promo Terbaru',
         previewText: data.previewText || '',
-        fromName: data.fromName || proj.smtp.fromName,
-        fromEmail: data.fromEmail || proj.smtp.fromEmail,
+        fromName: data.fromName || proj.smtp?.fromName || 'Admin',
+        fromEmail: data.fromEmail || proj.smtp?.fromEmail || 'admin@example.com',
         projectId: proj.id,
         projectName: proj.name,
         status: data.status || 'draft',
-        templateId: data.templateId,
-        htmlContent: data.htmlContent || templates[0].htmlContent,
-        mjmlContent: data.mjmlContent || templates[0].mjmlContent,
+        template_id: data.template_id || data.templateId,
+        templateId: data.templateId || data.template_id,
+        htmlContent: data.htmlContent || templates[0]?.htmlContent,
+        mjmlContent: data.mjmlContent || templates[0]?.mjmlContent,
         recipientCount: data.recipientCount || proj.subscriberCount || 100,
         sentCount: 0,
         openCount: 0,
@@ -498,7 +547,7 @@ export function MailingProvider({ children }: { children: React.ReactNode }) {
 
       // Increment project active campaign count
       const updatedProjects = projects.map((p) =>
-        p.id === proj.id ? { ...p, activeCampaignsCount: p.activeCampaignsCount + 1 } : p
+        p.id === proj.id ? { ...p, activeCampaignsCount: (p.activeCampaignsCount || 0) + 1 } : p
       );
       saveProjects(updatedProjects);
 
@@ -561,7 +610,7 @@ export function MailingProvider({ children }: { children: React.ReactNode }) {
           if (recipientIds.includes(s.id)) {
             return {
               ...s,
-              totalEmailsReceived: s.totalEmailsReceived + 1,
+              totalEmailsReceived: (s.totalEmailsReceived || 0) + 1,
             };
           }
           return s;
@@ -663,10 +712,10 @@ export function MailingProvider({ children }: { children: React.ReactNode }) {
     const unsubscribedCount = relevantSubs.filter((s) => s.status === 'unsubscribed').length;
     const bouncedCount = relevantSubs.filter((s) => s.status === 'bounced').length;
 
-    const sentCampaigns = relevantCampaigns.filter((c) => c.status === 'sent');
-    const totalSentMails = sentCampaigns.reduce((acc, c) => acc + c.sentCount, 0);
-    const totalOpens = sentCampaigns.reduce((acc, c) => acc + c.openCount, 0);
-    const totalClicks = sentCampaigns.reduce((acc, c) => acc + c.clickCount, 0);
+    const sentCampaigns = relevantCampaigns.filter((c) => c.status === 'sent' || c.status === 'completed');
+    const totalSentMails = sentCampaigns.reduce((acc, c) => acc + (c.sentCount || 0), 0);
+    const totalOpens = sentCampaigns.reduce((acc, c) => acc + (c.openCount || 0), 0);
+    const totalClicks = sentCampaigns.reduce((acc, c) => acc + (c.clickCount || 0), 0);
 
     const averageOpenRate = totalSentMails > 0 ? Math.round((totalOpens / totalSentMails) * 100) : 52;
     const averageClickRate = totalOpens > 0 ? Math.round((totalClicks / totalOpens) * 100) : 24;
@@ -681,10 +730,12 @@ export function MailingProvider({ children }: { children: React.ReactNode }) {
     ];
 
     const projectBreakdown = projects.map((p) => {
-      const projSubs = subscribers.filter((s) => s.projectId === p.id);
-      const projSent = campaigns.filter((c) => c.projectId === p.id && c.status === 'sent');
-      const projTotalMails = projSent.reduce((acc, c) => acc + c.sentCount, 0);
-      const projTotalOpens = projSent.reduce((acc, c) => acc + c.openCount, 0);
+      const projSubs = subscribers.filter((s) => s.projectId === p.id || s.project_id === p.id);
+      const projSent = campaigns.filter(
+        (c) => (c.projectId === p.id || c.project_id === p.id) && (c.status === 'sent' || c.status === 'completed')
+      );
+      const projTotalMails = projSent.reduce((acc, c) => acc + (c.sentCount || 0), 0);
+      const projTotalOpens = projSent.reduce((acc, c) => acc + (c.openCount || 0), 0);
       const rate = projTotalMails > 0 ? Math.round((projTotalOpens / projTotalMails) * 100) : 54;
       return {
         projectName: p.name,
@@ -707,6 +758,178 @@ export function MailingProvider({ children }: { children: React.ReactNode }) {
     };
   }, [subscribers, projects, campaigns, selectedProjectId]);
 
+  const addContact = useCallback(
+    async (contactData: Partial<Contact>): Promise<Contact> => {
+      const email = contactData.email || '';
+      const email_normalized = email.toLowerCase().trim();
+      const proj = projects.find((p) => p.id === contactData.projectId) || projects[0];
+      const newContact: Contact = {
+        id: `sub-${Date.now()}`,
+        email,
+        email_normalized,
+        name: contactData.name || email.split('@')[0],
+        status: contactData.status || 'subscribed',
+        source: contactData.source || 'manual',
+        metadata: contactData.metadata || {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        projectId: proj?.id || 'prj-saas',
+        projectName: proj?.name || 'SaaS Platform Landing Page',
+        joinedAt: new Date().toISOString(),
+        tags: contactData.tags || ['manual-entry'],
+        totalEmailsReceived: 0,
+        openRate: 0,
+        mailingListIds: contactData.mailingListIds || [],
+      };
+      const updated = [newContact, ...subscribers];
+      saveSubscribers(updated);
+      return newContact;
+    },
+    [projects, subscribers, saveSubscribers]
+  );
+
+  const createMailingList = useCallback(
+    async (data: Partial<MailingList>): Promise<MailingList> => {
+      const newList: MailingList = {
+        id: `list-${Date.now()}`,
+        project_id: data.project_id || (projects[0]?.id || 'prj-saas'),
+        name: data.name || 'New Mailing List',
+        slug: data.slug || (data.name ? data.name.toLowerCase().replace(/\s+/g, '-') : 'new-list'),
+        status: 'active',
+        description: data.description || '',
+        subscriberCount: 0,
+      };
+      setMailingLists((prev) => [newList, ...prev]);
+      return newList;
+    },
+    [projects]
+  );
+
+  const addSubscription = useCallback(
+    async (contactId: string, mailingListId: string): Promise<Subscription> => {
+      const newSub: Subscription = {
+        id: `subsc-${Date.now()}`,
+        contact_id: contactId,
+        mailing_list_id: mailingListId,
+        status: 'active',
+        subscribed_at: new Date().toISOString(),
+      };
+      setSubscriptions((prev) => [newSub, ...prev]);
+      return newSub;
+    },
+    []
+  );
+
+  const createProjectKey = useCallback(
+    async (data: Partial<ProjectKey>): Promise<ProjectKey> => {
+      const newKey: ProjectKey = {
+        id: `pk-${Date.now()}`,
+        project_id: data.project_id || (projects[0]?.id || 'prj-saas'),
+        name: data.name || 'API Key',
+        key_hash: `ml_live_${Math.random().toString(36).substring(2, 12)}`,
+        last_used_at: new Date().toISOString(),
+        expires_at: data.expires_at || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'active',
+      };
+      setProjectKeys((prev) => [newKey, ...prev]);
+      return newKey;
+    },
+    [projects]
+  );
+
+  const revokeProjectKey = useCallback(async (id: string) => {
+    setProjectKeys((prev) => prev.map((k) => (k.id === id ? { ...k, status: 'revoked' } : k)));
+  }, []);
+
+  const addEmailProvider = useCallback(
+    async (data: Partial<EmailProvider>): Promise<EmailProvider> => {
+      const newProv: EmailProvider = {
+        id: `prov-${Date.now()}`,
+        name: data.name || 'New Provider',
+        type: data.type || 'smtp',
+        config: data.config || {},
+        status: 'active',
+      };
+      setEmailProviders((prev) => [...prev, newProv]);
+      return newProv;
+    },
+    []
+  );
+
+  const addSendingDomain = useCallback(
+    async (data: Partial<SendingDomain>): Promise<SendingDomain> => {
+      const newDom: SendingDomain = {
+        id: `dom-${Date.now()}`,
+        project_id: data.project_id || (projects[0]?.id || 'prj-saas'),
+        provider_id: data.provider_id || (emailProviders[0]?.id || 'prov-mailgun-1'),
+        domain: data.domain || 'example.com',
+        verification: {
+          dkim: { status: 'verified', record: `k1._domainkey.${data.domain || 'example.com'}` },
+          spf: { status: 'verified', record: 'v=spf1 include:mailrelay.net ~all' },
+          dmarc: { status: 'verified', record: `v=DMARC1; p=quarantine; rua=mailto:dmarc@${data.domain || 'example.com'}` },
+        },
+        status: 'verified',
+      };
+      setSendingDomains((prev) => [...prev, newDom]);
+      return newDom;
+    },
+    [projects, emailProviders]
+  );
+
+  const verifySendingDomain = useCallback(async (id: string) => {
+    setSendingDomains((prev) =>
+      prev.map((d) =>
+        d.id === id
+          ? {
+              ...d,
+              status: 'verified',
+              dkimVerified: true,
+              spfVerified: true,
+              dmarcVerified: true,
+              verification: {
+                dkim: { status: 'verified', record: d.verification?.dkim?.record || 'v=DKIM1; k=rsa; p=MIGf...' },
+                spf: { status: 'verified', record: d.verification?.spf?.record || 'v=spf1 include:sendgrid.net ~all' },
+                dmarc: { status: 'verified', record: d.verification?.dmarc?.record || 'v=DMARC1; p=none' },
+              },
+            }
+          : d
+      )
+    );
+  }, []);
+
+  const addEmailIdentity = useCallback(
+    async (data: Partial<EmailIdentity>): Promise<EmailIdentity> => {
+      const newIdent: EmailIdentity = {
+        id: `ident-${Date.now()}`,
+        project_id: data.project_id || (projects[0]?.id || 'prj-saas'),
+        domain_id: data.domain_id || (sendingDomains[0]?.id || 'dom-1'),
+        from_email: data.from_email || 'hello@example.com',
+        from_name: data.from_name || 'Marketing Team',
+        reply_to: data.reply_to || 'support@example.com',
+        status: 'verified',
+      };
+      setEmailIdentities((prev) => [...prev, newIdent]);
+      return newIdent;
+    },
+    [projects, sendingDomains]
+  );
+
+  const assignUserRole = useCallback(
+    async (userId: string, roleId: string, projectId: string | null) => {
+      const newAssignment: UserRoleAssignment = {
+        id: `ura-${Date.now()}`,
+        user_id: userId,
+        role_id: roleId,
+        project_id: projectId,
+      };
+      setUserRoleAssignments((prev) => [
+        ...prev.filter((a) => !(a.user_id === userId && a.project_id === projectId)),
+        newAssignment,
+      ]);
+    },
+    []
+  );
+
   const value = {
     currentUser,
     isAuthenticated: !!currentUser,
@@ -724,12 +947,30 @@ export function MailingProvider({ children }: { children: React.ReactNode }) {
     organizations,
     createOrganization,
     subscribers,
+    contacts: subscribers,
     addSubscriber,
+    addContact,
     updateSubscriberStatus,
     deleteSubscriber,
     bulkUpdateSubscriberStatus,
+    mailingLists,
+    createMailingList,
+    subscriptions,
+    addSubscription,
+    projectKeys,
+    createProjectKey,
+    revokeProjectKey,
+    emailProviders,
+    addEmailProvider,
+    sendingDomains,
+    addSendingDomain,
+    verifySendingDomain,
+    emailIdentities,
+    addEmailIdentity,
     campaigns,
     templates,
+    templateVersions,
+    campaignRecipients,
     createCampaign,
     updateCampaign,
     sendBulkCampaign,
@@ -737,6 +978,12 @@ export function MailingProvider({ children }: { children: React.ReactNode }) {
     users,
     createUser,
     updateUser,
+    userSessions,
+    roles,
+    permissions,
+    rolesPermissions,
+    userRoleAssignments,
+    assignUserRole,
     accessPolicies,
     updateAccessPolicy,
     hasPermission,

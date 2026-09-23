@@ -29,8 +29,8 @@ export default function CreateCampaignModal({
   const [projectId, setProjectId] = useState(projects[0]?.id || '');
   const [selectedTemplateId, setSelectedTemplateId] = useState(initialTemplate?.id || templates[0]?.id || '');
 
-  const [fromName, setFromName] = useState(projects[0]?.smtp.fromName || 'Marketing Team');
-  const [fromEmail, setFromEmail] = useState(projects[0]?.smtp.fromEmail || 'promo@example.com');
+  const [fromName, setFromName] = useState(projects[0]?.smtp?.fromName || 'Marketing Team');
+  const [fromEmail, setFromEmail] = useState(projects[0]?.smtp?.fromEmail || 'promo@example.com');
   const [htmlContent, setHtmlContent] = useState(
     initialTemplate?.htmlContent || templates[0]?.htmlContent || ''
   );
@@ -40,14 +40,14 @@ export default function CreateCampaignModal({
 
   const handleSelectTemplate = (tpl: EmailTemplate) => {
     setSelectedTemplateId(tpl.id);
-    setSubject(tpl.subject);
-    setHtmlContent(tpl.htmlContent);
+    if (tpl.subject) setSubject(tpl.subject);
+    if (tpl.htmlContent) setHtmlContent(tpl.htmlContent);
   };
 
   const handleProjectChange = (projId: string) => {
     setProjectId(projId);
     const p = projects.find((proj) => proj.id === projId);
-    if (p) {
+    if (p && p.smtp) {
       setFromName(p.smtp.fromName);
       setFromEmail(p.smtp.fromEmail);
     }
@@ -64,9 +64,9 @@ export default function CreateCampaignModal({
         previewText,
         fromName,
         fromEmail,
-        projectId: proj.id,
-        projectName: proj.name,
-        templateId: selectedTemplateId,
+        projectId: proj ? proj.id : 'proj-1',
+        projectName: proj ? proj.name : 'Utama',
+        template_id: selectedTemplateId,
         htmlContent,
         status: isDraft ? 'draft' : 'scheduled',
       });

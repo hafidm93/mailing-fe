@@ -9,11 +9,19 @@ export async function POST(req: NextRequest) {
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     const user = INITIAL_USERS.find(
-      (u) => u.username.toLowerCase() === (username || '').toLowerCase()
+      (u) =>
+        (u.username && u.username.toLowerCase() === (username || '').toLowerCase()) ||
+        u.email.toLowerCase() === (username || '').toLowerCase()
     );
 
     // Simple demo auth check: password matches "<username>123" or "admin" / "password"
-    if (user && (password === `${user.username}123` || password === 'admin123' || password === 'password')) {
+    if (
+      user &&
+      (password === `${user.username || 'user'}123` ||
+        password === 'admin123' ||
+        password === 'password' ||
+        password === 'admin')
+    ) {
       return NextResponse.json({
         success: true,
         user: {

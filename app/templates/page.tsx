@@ -2,12 +2,12 @@
 
 import React from 'react';
 import AppShell from '@/components/layout/AppShell';
-import DashboardView from '@/components/dashboard/DashboardView';
+import TemplatesView from '@/components/templates/TemplatesView';
 
-export default function RootPage() {
+export default function TemplatesPage() {
   return (
     <AppShell>
-      <DashboardView />
+      <TemplatesView />
     </AppShell>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMailingStore } from '@/lib/store';
 import { Campaign, EmailTemplate } from '@/types';
 import {
@@ -18,17 +19,26 @@ import {
 } from 'lucide-react';
 
 interface CampaignsViewProps {
-  onOpenCreateCampaign: (template?: EmailTemplate) => void;
-  onOpenBulkSend: () => void;
+  onOpenCreateCampaign?: (template?: EmailTemplate) => void;
+  onOpenBulkSend?: () => void;
 }
 
 export default function CampaignsView({
   onOpenCreateCampaign,
   onOpenBulkSend,
 }: CampaignsViewProps) {
+  const router = useRouter();
   const { campaigns, templates, projects, selectedProjectId, hasPermission } = useMailingStore();
   const [activeTab, setActiveTab] = useState<'campaigns' | 'templates'>('campaigns');
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
+
+  const handleCreate = (template?: EmailTemplate) => {
+    if (onOpenCreateCampaign) {
+      onOpenCreateCampaign(template);
+    } else {
+      router.push('/campaigns/new');
+    }
+  };
 
   const filteredCampaigns =
     selectedProjectId === 'all'
@@ -66,7 +76,7 @@ export default function CampaignsView({
             <button
               id="btn-campaign-create"
               type="button"
-              onClick={() => onOpenCreateCampaign()}
+              onClick={() => handleCreate()}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg bg-[#6094d4] hover:bg-[#5285c5] text-white transition-colors cursor-pointer shadow-xs"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -124,10 +134,13 @@ export default function CampaignsView({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredCampaigns.map((camp) => {
+                  const sentCount = camp.sentCount || 0;
+                  const openCount = camp.openCount || 0;
+                  const clickCount = camp.clickCount || 0;
                   const openRate =
-                    camp.sentCount > 0 ? Math.round((camp.openCount / camp.sentCount) * 100) : 0;
+                    sentCount > 0 ? Math.round((openCount / sentCount) * 100) : 0;
                   const clickRate =
-                    camp.openCount > 0 ? Math.round((camp.clickCount / camp.openCount) * 100) : 0;
+                    openCount > 0 ? Math.round((clickCount / openCount) * 100) : 0;
 
                   return (
                     <tr
@@ -167,21 +180,21 @@ export default function CampaignsView({
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="font-semibold text-slate-800">
-                          {camp.sentCount > 0 ? camp.sentCount : camp.recipientCount} target
+                          {sentCount > 0 ? sentCount : (camp.recipientCount || 0)} target
                         </div>
                         <div className="text-[10px] text-slate-400">
                           {camp.targetSegment || 'Semua Subscriber'}
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
-                        {camp.sentCount > 0 ? (
+                        {sentCount > 0 ? (
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-1 font-semibold text-slate-700">
                               <span>Open: {openRate}%</span>
-                              <span className="text-slate-400 text-[10px]">({camp.openCount})</span>
+                              <span className="text-slate-400 text-[10px]">({openCount})</span>
                             </div>
                             <div className="text-[10px] text-slate-500">
-                              Click: {clickRate}% ({camp.clickCount})
+                              Click: {clickRate}% ({clickCount})
                             </div>
                           </div>
                         ) : (
@@ -189,9 +202,11 @@ export default function CampaignsView({
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-[11px] text-slate-500">
-                        {camp.sentAt
-                          ? `Terkirim: ${new Date(camp.sentAt).toLocaleDateString('id-ID')}`
-                          : `Dibuat: ${new Date(camp.createdAt).toLocaleDateString('id-ID')}`}
+                        {camp.sent_at
+                          ? `Terkirim: ${new Date(camp.sent_at).toLocaleDateString('id-ID')}`
+                          : camp.createdAt
+                            ? `Dibuat: ${new Date(camp.createdAt).toLocaleDateString('id-ID')}`
+                            : '-'}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         {hasPermission('canSendBulkCampaign') && (
@@ -225,7 +240,7 @@ export default function CampaignsView({
                     {tpl.category}
                   </span>
                   <span className="text-[10px] text-slate-400">
-                    Update: {new Date(tpl.updatedAt).toLocaleDateString()}
+                    Update: {tpl.updatedAt ? new Date(tpl.updatedAt).toLocaleDateString() : '-'}
                   </span>
                 </div>
                 <h3 className="font-bold text-sm text-slate-800 mb-1">
@@ -253,7 +268,7 @@ export default function CampaignsView({
                 {hasPermission('canCreateCampaign') && (
                   <button
                     type="button"
-                    onClick={() => onOpenCreateCampaign(tpl)}
+                    onClick={() => handleCreate(tpl)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#6094d4] hover:bg-[#5285c5] text-white rounded-lg text-xs font-medium transition-colors cursor-pointer shadow-xs"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
@@ -289,7 +304,7 @@ export default function CampaignsView({
             <div
               className="p-4 bg-slate-50 border border-slate-200 rounded-lg max-h-[60vh] overflow-y-auto"
               dangerouslySetInnerHTML={{
-                __html: previewTemplate.htmlContent
+                __html: (previewTemplate.htmlContent || '')
                   .replace(/\{\{subscriber\.name\}\}/g, 'Pengguna Terhormat')
                   .replace(/\{\{project\.name\}\}/g, 'Perusahaan Anda')
                   .replace(/\{\{unsubscribe_url\}\}/g, '#'),
@@ -308,9 +323,9 @@ export default function CampaignsView({
                 <button
                   type="button"
                   onClick={() => {
-                    const tpl = previewTemplate;
+                    const tpl = previewTemplate || undefined;
                     setPreviewTemplate(null);
-                    onOpenCreateCampaign(tpl);
+                    handleCreate(tpl);
                   }}
                   className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#6094d4] hover:bg-[#5285c5] text-white cursor-pointer shadow-xs"
                 >
